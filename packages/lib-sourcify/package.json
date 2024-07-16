@@ -35,7 +35,7 @@
     "doc:publish": "gh-pages -m \"[ci skip] Updates\" -d build/docs"
   },
   "engines": {
-    "node": "22.4.0"
+    "node": "22.4.1"
   },
   "dependencies": {
     "@ethereum-sourcify/bytecode-utils": "^1.2.8",
@@ -72,7 +72,7 @@
     "open-cli": "8.0.0",
     "solc": "0.8.26",
     "tree-kill": "1.2.2",
-    "typedoc": "0.26.3"
+    "typedoc": "0.26.4"
   },
   "files": [
     "build/main",
