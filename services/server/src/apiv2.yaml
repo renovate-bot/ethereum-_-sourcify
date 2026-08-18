@@ -648,7 +648,8 @@ components:
                   error:
                     allOf:
                       - $ref: "#/components/schemas/MatchingErrorResponse"
-                      - description: "Optional, when the verification fails for some reason."
+                      - description: |-
+                          Optional, when the verification fails for some reason. The `customCode` indicates the reason.
                   jobStartTime:
                     type: string
                     format: date-time

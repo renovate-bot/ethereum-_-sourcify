@@ -64,9 +64,16 @@ const initWorker = () => {
   solc = new SolcLocal(
     Piscina.workerData.solcRepoPath,
     Piscina.workerData.solJsonRepoPath,
+    Piscina.workerData.compilerTimeoutMs,
   );
-  vyper = new VyperLocal(Piscina.workerData.vyperRepoPath);
-  fe = new FeLocal(Piscina.workerData.feRepoPath);
+  vyper = new VyperLocal(
+    Piscina.workerData.vyperRepoPath,
+    Piscina.workerData.compilerTimeoutMs,
+  );
+  fe = new FeLocal(
+    Piscina.workerData.feRepoPath,
+    Piscina.workerData.compilerTimeoutMs,
+  );
 };
 
 async function runWorkerFunctionWithContext<T extends VerificationWorkerInput>(

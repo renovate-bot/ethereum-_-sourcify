@@ -266,7 +266,8 @@ export type VerificationErrorCode =
   | "unsupported_language"
   | "already_verified"
   | "internal_error"
-  | "no_similar_match_found";
+  | "no_similar_match_found"
+  | "job_abandoned";
 
 export type VerificationErrorParameters =
   | SourcifyLibErrorParameters
@@ -286,6 +287,8 @@ export function getVerificationErrorMessage(
       return "The server encountered an unexpected error.";
     case "no_similar_match_found":
       return "No similar verified contracts were found in the database.";
+    case "job_abandoned":
+      return "The verification job did not complete in time and was marked as abandoned by the server. This usually happens when the compilation runs out of memory or hangs. You can resubmit the verification.";
     default:
       return getErrorMessageFromCode(params as SourcifyLibErrorParameters);
   }
