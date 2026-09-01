@@ -112,11 +112,14 @@ npm run monitor:start
 
 **The authoritative schema is the committed dump at [`services/database/sourcify-database.sql`](services/database/sourcify-database.sql).** Read it to answer schema questions instead of querying a live database. dbmate regenerates it on `npm run migrate:up`, and it must be committed alongside any new migration (see [`services/database/README.md`](services/database/README.md)).
 
+**Never hand-edit `sourcify-database.sql` — always regenerate it with dbmate.** The `validate-database-schema` CI job applies all migrations to a clean postgres, dumps it, and diffs (comment/blank-line-normalized) against the committed file; pg_dump's object ordering is non-obvious (e.g. constraints sort by constraint name, not table name), so hand-edits get the ordering wrong and fail CI. The regeneration recipe (throwaway `postgres:15` container + `DBMATE_SCHEMA_FILE`) is in [`services/database/README.md`](services/database/README.md) under "Adding a new migration"; pg_dump must be version 15 to match CI (pgdg `postgresql-client-15`), not 17.
+
 How the tables join:
 
 - `sourcify_matches.verified_contract_id` → `verified_contracts.id` (Sourcify-specific match info: `creation_match`/`runtime_match` quality, `chain_id`, and the contract's `metadata`)
 - `verified_contracts.compilation_id` → `compiled_contracts.id`, and `verified_contracts.deployment_id` → `contract_deployments.id`
 - `compiled_contracts_sources` (`compilation_id`, `path`, `source_hash`) is the source set stored for a compilation; join `source_hash` → `sources.source_hash` for the actual content
+- `compiled_contracts_metadata.compilation_id` → `compiled_contracts.id`: one metadata blob per compilation (`sourcify_matches.metadata` is kept only until reads switch over, #2924)
 - `code` holds bytecode, referenced via `creation_code_hash`/`runtime_code_hash` by both `compiled_contracts` (compiled) and `contracts` (onchain); reach the latter through `contract_deployments.contract_id` → `contracts.id`
 
 ### Storage Services
