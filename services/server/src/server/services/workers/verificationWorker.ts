@@ -15,8 +15,6 @@ import {
   EtherscanUtils,
 } from "@ethereum-sourcify/lib-sourcify";
 import { resolve } from "path";
-import { writeFileSync } from "fs";
-import { isMainThread, parentPort, threadId } from "node:worker_threads";
 import { ChainRepository } from "../../../sourcify-chain-repository";
 import { SolcLocal } from "../compiler/local/SolcLocal";
 import { VyperLocal } from "../compiler/local/VyperLocal";
@@ -31,7 +29,6 @@ import type {
   VerifyOutput,
   VerificationWorkerInput,
   VerifySimilarityInput,
-  WorkerTaskStartMessage,
 } from "./workerTypes";
 import logger, { setLogLevel } from "../../../common/logger";
 import { asyncLocalStorage } from "../../../common/async-context";
@@ -40,19 +37,6 @@ import { createPreRunCompilationFromStoredCandidate } from "../utils/database-ut
 import { createCompilationFromJsonInput } from "../utils/compilation";
 
 export const filename = resolve(__filename);
-
-function setThreadName(name: string) {
-  try {
-    writeFileSync("/proc/thread-self/comm", name.slice(0, 15));
-  } catch {
-    // Not Linux or not permitted. The name is only a diagnostic aid.
-  }
-}
-
-// The main thread also imports this module for `filename`
-if (!isMainThread) {
-  setThreadName(`sfy-pool-${threadId}`);
-}
 
 let chainRepository: ChainRepository;
 let solc: SolcLocal;
@@ -102,15 +86,6 @@ async function runWorkerFunctionWithContext<T extends VerificationWorkerInput>(
   workerFunction: (input: T) => Promise<VerifyOutput>,
   input: T,
 ): Promise<VerifyOutput> {
-  // Tells the main thread which job runs on this thread. A task that blocks
-  // the thread can never send anything later, so this goes out before any
-  // work. parentPort is null when the function runs outside of a worker.
-  const taskStart: WorkerTaskStartMessage = {
-    type: "task-start",
-    threadId,
-    verificationId: input.verificationId,
-  };
-  parentPort?.postMessage(taskStart);
   initWorker();
   // We need to inject the traceId for the logger here since the worker is running in its own thread.
   const context = { traceId: input.traceId };
@@ -279,7 +254,6 @@ async function _verifyFromMetadata({
 }
 
 async function _verifyFromEtherscan({
-  verificationId,
   chainId,
   address,
   etherscanResult,
@@ -298,7 +272,6 @@ async function _verifyFromEtherscan({
   }
 
   return _verifyFromJsonInput({
-    verificationId,
     chainId,
     address,
     jsonInput: compilation.jsonInput,
