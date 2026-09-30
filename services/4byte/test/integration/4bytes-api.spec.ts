@@ -238,7 +238,9 @@ describe("4byte API End-to-End Tests", function () {
         .query({ function: functionHash, event: eventHash });
 
       chai.expect(res).to.have.status(200);
-      chai.expect(res).to.have.header("cache-control", "public, max-age=3600");
+      chai
+        .expect(res)
+        .to.have.header("cache-control", "public, max-age=60, s-maxage=3600");
     });
 
     it("should set Cache-Control to no-store when one hash among known hashes is unknown", async function () {
@@ -325,7 +327,7 @@ describe("4byte API End-to-End Tests", function () {
       chai.expect(unfilteredRes).to.have.status(200);
       chai
         .expect(unfilteredRes)
-        .to.have.header("cache-control", "public, max-age=3600");
+        .to.have.header("cache-control", "public, max-age=60, s-maxage=3600");
     });
 
     it("should not set a public Cache-Control header on error responses", async function () {
