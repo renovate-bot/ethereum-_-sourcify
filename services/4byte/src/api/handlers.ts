@@ -64,6 +64,23 @@ function filterResponse(response: SignatureResult, shouldFilter: boolean) {
   }
 }
 
+// How long a CDN or client may store a lookup response in which every hash has a signature
+const LOOKUP_CACHE_MAX_AGE_SECONDS = 3600;
+
+// True if at least one hash was requested and every hash has at least one signature
+function hasSignaturesForAllHashes(response: SignatureResult): boolean {
+  const signatureLists = [
+    ...Object.values(response.function),
+    ...Object.values(response.event),
+  ];
+  return (
+    signatureLists.length > 0 &&
+    signatureLists.every(
+      (signatureItems) => signatureItems !== null && signatureItems.length > 0,
+    )
+  );
+}
+
 function mapLookupResult(rows: SignatureLookupRow[]): SignatureItem[] {
   return rows.map((row) => ({
     name: row.signature,
@@ -170,6 +187,13 @@ export function createSignatureHandlers(
 
         filterResponse(result, shouldFilter);
 
+        // Only complete answers are cacheable. An unknown hash can be imported at any time.
+        res.set(
+          "Cache-Control",
+          hasSignaturesForAllHashes(result)
+            ? `public, max-age=${LOOKUP_CACHE_MAX_AGE_SECONDS}`
+            : "no-store",
+        );
         res.status(StatusCodes.OK).json({
           ok: true,
           result,
