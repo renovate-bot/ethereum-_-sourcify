@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## sourcify-server@4.1.2 - 2026-10-05
+
+- fix: replace retired ipfs.io gateway defaults (#2985)
+- Sync three PRs that were merged into master directly (#2988, #2989, #2990) (#2996)
+- perf(server): aggregate sources and signatures in subqueries in the contract lookup (#3001)
+- Update dependencies
+
 ## sourcify-server@4.1.1 - 2026-09-22
 
 - fix: detect Livepeer ManagerProxy in proxyResolution (#2959)\
