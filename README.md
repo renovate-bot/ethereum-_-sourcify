@@ -48,3 +48,7 @@ Sourcify aims to be fully open and transparent. You can see what we are working 
 If you'd like to add a new chain support to Sourcify please follow the [chain support instructions](https://docs.sourcify.dev/docs/chain-support/) in docs.
 
 _Sourcify is an [Argot Collective](https://argot.org) project_
+
+<a href="https://drpc.org?ref=7ef756">
+  <img width="218" height="54" src="https://drpc.org/images/external/powered-by-drpc-dark.svg" alt="Powered by dRPC" />
+</a>
