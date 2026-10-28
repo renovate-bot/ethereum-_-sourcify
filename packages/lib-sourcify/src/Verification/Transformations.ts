@@ -4,6 +4,7 @@ import type {
   LinkReferences,
 } from '@ethereum-sourcify/compilers-types';
 import type {
+  CompilationLanguage,
   CompiledContractCborAuxdata,
   StringMap,
 } from '../Compilation/CompilationTypes';
@@ -125,9 +126,11 @@ function isVyperImmutableAuxdataStyle(auxdataStyle: AuxdataStyle): boolean {
 }
 
 // returns the full bytecode with the call protection replaced with the real address
+// Only Solidity libraries have the `PUSH20 <address> ADDRESS EQ` guard; a leading PUSH20 elsewhere (e.g. Yul) is data.
 export function extractCallProtectionTransformation(
   populatedRecompiledBytecode: string,
   onchainRuntimeBytecode: string,
+  language: CompilationLanguage,
 ) {
   const transformations: Transformation[] = [];
   const transformationValues: TransformationValues = {};
@@ -136,8 +139,11 @@ export function extractCallProtectionTransformation(
 
   const push20CodeOp = '73';
   const callProtection = `0x${push20CodeOp}${'00'.repeat(20)}`;
+  const addressOp = '30';
+  const eqOp = '14';
+  const callProtectionGuard = `${callProtection}${addressOp}${eqOp}`;
 
-  if (template.startsWith(callProtection)) {
+  if (language === 'Solidity' && template.startsWith(callProtectionGuard)) {
     const replacedCallProtection = real.slice(0, 0 + callProtection.length);
     const callProtectionAddress = replacedCallProtection.slice(4); // remove 0x73
     transformations.push(CallProtectionTransformation());
@@ -315,6 +321,9 @@ export function extractLibrariesTransformation(
   const transformations: Transformation[] = [];
   const transformationValues: TransformationValues = {};
   const libraryMap: StringMap = {};
+  // A library linked to different addresses at different references is reported and refused
+  const inconsistentLibraries: { [fqn: string]: string[] } = {};
+  const seenAddresses: { [fqn: string]: string } = {};
   for (const file in linkReferences) {
     for (const lib in linkReferences[file]) {
       for (const linkRefObj of linkReferences[file][lib]) {
@@ -348,6 +357,17 @@ export function extractLibrariesTransformation(
         const address = real.slice(strStart, strStart + strLength);
         libraryMap[placeholder] = address;
 
+        if (seenAddresses[fqn] === undefined) {
+          seenAddresses[fqn] = address;
+        } else if (seenAddresses[fqn] !== address) {
+          const addresses = (inconsistentLibraries[fqn] ??= [
+            '0x' + seenAddresses[fqn],
+          ]);
+          if (!addresses.includes('0x' + address)) {
+            addresses.push('0x' + address);
+          }
+        }
+
         // Replace the specific occurrence of the placeholder
         template =
           template.slice(0, strStart) +
@@ -370,6 +390,10 @@ export function extractLibrariesTransformation(
     libraryMap,
     transformations,
     transformationValues,
+    inconsistentLibraries:
+      Object.keys(inconsistentLibraries).length > 0
+        ? inconsistentLibraries
+        : undefined,
   };
 }
 

@@ -556,6 +556,15 @@ export class Verification {
       onchainBytecode,
       linkReferences,
     );
+    if (librariesTransformationResult.inconsistentLibraries) {
+      logWarn('Library linked to multiple addresses, refusing match', {
+        address: this.address,
+        chainId: this.sourcifyChain.chainId,
+        isCreation,
+        libraries: librariesTransformationResult.inconsistentLibraries,
+      });
+      return result;
+    }
     const libraryMap = librariesTransformationResult.libraryMap;
     populatedRecompiledBytecode =
       librariesTransformationResult.populatedRecompiledBytecode;
@@ -631,6 +640,7 @@ export class Verification {
       extractCallProtectionTransformation(
         this.compilation.runtimeBytecode,
         this.onchainRuntimeBytecode,
+        this.compilation.language,
       );
 
     // Handle immutable references

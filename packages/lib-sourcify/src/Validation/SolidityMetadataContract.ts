@@ -1,6 +1,6 @@
 import { id as keccak256str } from 'ethers';
 import semver from 'semver';
-import { performFetch } from './fetchUtils';
+import { getFetchableSourceUrl, performFetch } from './fetchUtils';
 import { SolidityCompilation } from '../Compilation/SolidityCompilation';
 import type {
   SolidityJsonInput,
@@ -31,7 +31,7 @@ import {
   reorderAlphabetically,
   getVariationsByContentHash,
 } from './variationsUtils';
-import { logDebug } from '../logger';
+import { logDebug, logWarn } from '../logger';
 import { convertLibrariesToStdJsonFormat } from '../utils/utils';
 
 export const DEFAULT_IPFS_GATEWAY = 'https://ipfs.filebase.io/ipfs/';
@@ -211,12 +211,18 @@ export class SolidityMetadataContract {
 
       let retrievedContent = null;
 
+      // Only fetch content that can be checked against a hash
+      if (!hash) {
+        logWarn('Not fetching a missing source without keccak256', {
+          fileName,
+        });
+        continue;
+      }
+
       // Sometimes file paths are github urls, try to fetch from there
-      if (fileName.includes('github.com')) {
-        const githubUrl = fileName
-          .replace('github.com', 'raw.githubusercontent.com')
-          .replace('/blob/', '/');
-        retrievedContent = await performFetch(githubUrl, hash, fileName);
+      const sourceUrl = getFetchableSourceUrl(fileName);
+      if (sourceUrl) {
+        retrievedContent = await performFetch(sourceUrl, hash, fileName);
       } else {
         for (const url of file.urls) {
           if (url.startsWith(IPFS_PREFIX)) {
@@ -227,6 +233,7 @@ export class SolidityMetadataContract {
               hash,
               fileName,
               SolidityMetadataContract.ipfsGateway.headers,
+              { trusted: true },
             );
             if (retrievedContent) {
               break;
