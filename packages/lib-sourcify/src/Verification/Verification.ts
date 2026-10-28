@@ -555,6 +555,7 @@ export class Verification {
       populatedRecompiledBytecode,
       onchainBytecode,
       linkReferences,
+      this.compilation.compilerVersion,
     );
     if (librariesTransformationResult.inconsistentLibraries) {
       logWarn('Library linked to multiple addresses, refusing match', {

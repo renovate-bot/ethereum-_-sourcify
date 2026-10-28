@@ -10,6 +10,7 @@ import type {
 } from '../Compilation/CompilationTypes';
 import type { InterfaceAbi } from 'ethers';
 import { AbiCoder, id as keccak256Str, Interface } from 'ethers';
+import semver from 'semver';
 import { logError } from '../logger';
 
 const abiCoder = AbiCoder.defaultAbiCoder();
@@ -313,10 +314,20 @@ export function extractConstructorArgumentsTransformation(
   };
 }
 
+/**
+ * Before v0.4.9 the placeholder contains only the library name.
+ * Only Solidity versions are valid semver, so the version is coerced first.
+ */
+function hasBareNamePlaceholders(compilerVersion?: string): boolean {
+  const version = compilerVersion ? semver.coerce(compilerVersion) : null;
+  return version !== null && semver.lt(version, '0.4.9');
+}
+
 export function extractLibrariesTransformation(
   template: string,
   real: string,
   linkReferences: LinkReferences,
+  compilerVersion?: string,
 ) {
   const transformations: Transformation[] = [];
   const transformationValues: TransformationValues = {};
@@ -340,6 +351,8 @@ export function extractLibrariesTransformation(
         // Placeholder format was different pre v0.5.0 https://docs.soliditylang.org/en/v0.4.26/contracts.html#libraries
         const trimmedFQN = fqn.slice(0, 36); // in case the fqn is too long
         const calculatedPreV050Placeholder = '__' + trimmedFQN.padEnd(38, '_');
+        const calculatedPreV049Placeholder =
+          '__' + lib.slice(0, 36).padEnd(38, '_');
 
         // We support the placeholder to be zeroed out to accept bytecodes coming from the DB
         // (In our database we store bytecodes with the placeholder zeroed out)
@@ -348,10 +361,12 @@ export function extractLibrariesTransformation(
         if (!(
           placeholder === calculatedPlaceholder ||
           placeholder === calculatedPreV050Placeholder ||
+          (placeholder === calculatedPreV049Placeholder &&
+            hasBareNamePlaceholders(compilerVersion)) ||
           placeholder === calculatedZeroedPlaceholder
         ))
           throw new Error(
-            `Library placeholder mismatch: ${placeholder} vs ${calculatedPlaceholder} or ${calculatedPreV050Placeholder}`,
+            `Library placeholder mismatch: ${placeholder} vs ${calculatedPlaceholder}, ${calculatedPreV050Placeholder} or ${calculatedPreV049Placeholder}`,
           );
 
         const address = real.slice(strStart, strStart + strLength);
